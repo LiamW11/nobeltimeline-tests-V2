@@ -62,22 +62,22 @@ export function wireDnD(root) {
         startTouchX = element.touches[0].clientX;
         startTouchY = element.touches[0].clientY;
         
+        // Spara vilket kort vi potentiellt kommer att dra
+        dragElement = currentCard;
+        
         // Starta en timer som väntar 0.3 sekunder innan drag aktiveras
         touchTimer = setTimeout(() => {
             // Efter 0.3 sekunder, aktivera dragging
             isDragging = true;
-            
-            // Spara det element som ska flyttas
-            dragElement = currentCard;
             // Spara startpositionen för touch (första fingrets Y-koordinat)
             touchStartY = element.touches[0].clientY;
             
             // Skapa en visuell klon av elementet som följer fingret
-            touchClone = currentCard.cloneNode(true); // true = klona alla barn också
+            touchClone = dragElement.cloneNode(true); // true = klona alla barn också
             // Positionera klonen med fixed position (följer inte scrollning)
             touchClone.style.position = "fixed";
             // Sätt samma bredd som originalet
-            touchClone.style.width = currentCard.offsetWidth + "px";
+            touchClone.style.width = dragElement.offsetWidth + "px";
             // Gör klonen lite genomskinlig så man ser att det är en kopia
             touchClone.style.opacity = "0.8";
             // Förhindra att klonen kan klickas/touchas (så vi kan hitta element under den)
@@ -85,14 +85,14 @@ export function wireDnD(root) {
             // Sätt hög z-index så klonen visas ovanpå allt annat
             touchClone.style.zIndex = "1000";
             // Positionera klonen på samma X-position som originalet
-            touchClone.style.left = currentCard.getBoundingClientRect().left + "px";
+            touchClone.style.left = dragElement.getBoundingClientRect().left + "px";
             // Centrera klonen vertikalt på fingrets position
-            touchClone.style.top = element.touches[0].clientY - (currentCard.offsetHeight / 2) + "px";
+            touchClone.style.top = element.touches[0].clientY - (dragElement.offsetHeight / 2) + "px";
             // Lägg till klonen i body (utanför listan så den kan röra sig fritt)
             document.body.appendChild(touchClone);
             
             // Gör originalelementet genomskinligt så man ser var det kommer att placeras
-            currentCard.style.opacity = "0.3";
+            dragElement.style.opacity = "0.3";
             
             // Ge användaren haptisk feedback (vibration) om tillgängligt
             if (navigator.vibrate) {
@@ -104,6 +104,11 @@ export function wireDnD(root) {
 
     // Lyssnare för när användaren rör fingret över skärmen
     list.addEventListener("touchmove", (element) => {
+        // Om drag är aktivt, förhindra scroll DIREKT
+        if (isDragging) {
+            element.preventDefault();
+        }
+        
         // Kolla om användaren rört fingret för mycket innan timern gått ut
         if (touchTimer && !isDragging) {
             const currentX = element.touches[0].clientX;
@@ -115,13 +120,9 @@ export function wireDnD(root) {
             if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
                 clearTimeout(touchTimer);
                 touchTimer = null;
+                dragElement = null;
                 return;
             }
-        }
-        
-        // Om drag är aktivt, förhindra scroll DIREKT (även om klonen inte skapats än)
-        if (isDragging) {
-            element.preventDefault();
         }
         
         // Om drag inte är aktivt, tillåt normal scroll
