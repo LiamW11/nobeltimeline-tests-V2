@@ -1,144 +1,111 @@
 export function wireDnD(root) {
-    // Hämta listan med sorterbara element från DOM:en som skapas i renderboard från ui.js
     const list = root.querySelector("#sortable-list");
     if (!list) return;
 
-    // Variabel som håller elementet som dras för tillfället
     let dragElement = null;
-    // Variabel som håller den visuella klonen när man touchar på mobil
     let touchClone = null;
-    // Variabel som lagrar startpositionen för touch
     let touchStartY = 0;
-    // Variabel som spårar om en touch redan är aktiv
-    let isTouchActive = false;
-    // NY: Timer för att kolla om användaren hållit in i 100ms
-    let holdTimer = null;
-    // NY: Flagga för om drag är aktiverat (efter 100ms)
-    let dragEnabled = false;
-    // NY: Spara touch-position för att kolla om användaren rört sig
     let touchStartX = 0;
-
+    let isTouchActive = false;
     
-    //För pc
+    // NYA variabler för scroll-detection
+    let touchStartTime = 0;
+    let hasMoved = false;
+    let dragTimeout = null;
+    const DRAG_DELAY = 150; // millisekunder innan drag aktiveras
+    const MOVE_THRESHOLD = 10; // pixlar som krävs för att det ska räknas som movement
+
+    // För PC
     list.addEventListener("dragstart", (element) => {
-        // Hitta närmaste .draggable element (om användaren klickar på t.ex. en bild inuti)
         const currentCard = element.target.closest(".draggable");
-        // Om inget draggable element hittades, gör ingenting
         if (!currentCard) return;
-        // Spara det element som dras
         dragElement = currentCard;
     });
 
-    // Lyssnare för när användaren drar över ett annat element
     list.addEventListener("dragover", (element) => {
-        // Förhindra standardbeteendet (annars fungerar inte drop)
         element.preventDefault();
-        // Hitta det element som musen är över
         const over = element.target.closest(".draggable");
-        // Om inget element hittades eller om det är samma element som dras, gör ingenting
         if (!over || over === dragElement) return;
-        // Hämta elementets position och storlek
         const rect = over.getBoundingClientRect();
-        // Kolla om musen är i övre halvan av elementet (då ska vi placera före)
-        // before blir true eller false beroende på ifall det man drar är över eller under hälften av det hovrar över
         const before = (element.clientY - rect.top) < rect.height / 2;
-        // Om musen är i övre halvan, sätt in det dragna elementet före
         if (before) {
             over.parentNode.insertBefore(dragElement, over);
         } else {
-            // Annars sätt in det efter
             over.parentNode.insertBefore(dragElement, over.nextSibling);
         }
     });
 
-    //För mobil
-    // Lyssnare för när användaren börjar röra skärmen
+    // För mobil - UPPDATERAD touchstart
     list.addEventListener("touchstart", (element) => {
-        // Hitta närmaste .draggable element
         const currentCard = element.target.closest(".draggable");
-        // Om inget draggable element hittades, gör ingenting (tillåt scroll)
         if (!currentCard) return;
         
-        // Kontrollera om en touch redan är aktiv
         if (isTouchActive) {
             element.preventDefault();
-            return; // Ignorera nya touches
+            return;
         }
         
-        // NY: Starta inte drag direkt, vänta på timer
-        dragEnabled = false;
+        // Spara startposition och tid
+        touchStartY = element.touches[0].clientY;
+        touchStartX = element.touches[0].clientX;
+        touchStartTime = Date.now();
+        hasMoved = false;
         
-        // Markera att en touch nu är aktiv
-        isTouchActive = true;
-        
-        // Spara det element som ska flyttas
-        dragElement = currentCard;
-        // Spara startpositionen för touch
-        const touch = element.touches[0];
-        touchStartY = touch.clientY;
-        touchStartX = touch.clientX;
-        
-        // NY: Starta en timer som aktiverar drag efter 100ms
-        holdTimer = setTimeout(() => {
-            // Efter 100ms, aktivera drag
-            dragEnabled = true;
-            
-            // Förhindra default nu (så scroll inte startar)
-            element.preventDefault();
-            
-            // Skapa en visuell klon av elementet som följer fingret
-            touchClone = currentCard.cloneNode(true);
-            touchClone.style.position = "fixed";
-            touchClone.style.width = currentCard.offsetWidth + "px";
-            touchClone.style.opacity = "0.8";
-            touchClone.style.pointerEvents = "none";
-            touchClone.style.zIndex = "1000";
-            touchClone.style.left = currentCard.getBoundingClientRect().left + "px";
-            touchClone.style.top = touch.clientY - (currentCard.offsetHeight / 2) + "px";
-            document.body.appendChild(touchClone);
-            
-            // Gör originalelementet genomskinligt
-            currentCard.style.opacity = "0.3";
-        }, 100);
-    }, { passive: true }); // passive: true för bättre scroll-prestanda
-
-    // Lyssnare för när användaren rör fingret över skärmen
-    list.addEventListener("touchmove", (element) => {
-        const touch = element.touches[0];
-        
-        // NY: Om drag inte är aktiverat ännu, kolla om användaren rört sig för mycket
-        if (!dragEnabled && holdTimer) {
-            const moveX = Math.abs(touch.clientX - touchStartX);
-            const moveY = Math.abs(touch.clientY - touchStartY);
-            
-            // Om användaren rört sig mer än 10px, avbryt drag (användaren scrollar)
-            if (moveX > 10 || moveY > 10) {
-                clearTimeout(holdTimer);
-                holdTimer = null;
-                dragElement = null;
-                isTouchActive = false;
-                return;
+        // Sätt en timeout som aktiverar drag efter DRAG_DELAY
+        dragTimeout = setTimeout(() => {
+            // Aktivera endast om användaren inte har scrollat
+            if (!hasMoved) {
+                element.preventDefault();
+                isTouchActive = true;
+                dragElement = currentCard;
+                
+                // Skapa visuell klon
+                touchClone = currentCard.cloneNode(true);
+                touchClone.style.position = "fixed";
+                touchClone.style.width = currentCard.offsetWidth + "px";
+                touchClone.style.opacity = "0.8";
+                touchClone.style.pointerEvents = "none";
+                touchClone.style.zIndex = "1000";
+                touchClone.style.left = currentCard.getBoundingClientRect().left + "px";
+                touchClone.style.top = element.touches[0].clientY - (currentCard.offsetHeight / 2) + "px";
+                document.body.appendChild(touchClone);
+                
+                currentCard.style.opacity = "0.3";
             }
-            return; // Vänta på att timer ska aktivera drag
+        }, DRAG_DELAY);
+        
+    }, { passive: true }); // VIKTIGT: passive: true för att tillåta scroll
+
+    // NY touchmove - kolla om användaren scrollar
+    list.addEventListener("touchmove", (element) => {
+        // Om drag inte är aktiverat än
+        if (!isTouchActive && dragTimeout) {
+            const touch = element.touches[0];
+            const deltaY = Math.abs(touch.clientY - touchStartY);
+            const deltaX = Math.abs(touch.clientX - touchStartX);
+            
+            // Om användaren har rört sig mer än threshold, avbryt drag
+            if (deltaY > MOVE_THRESHOLD || deltaX > MOVE_THRESHOLD) {
+                hasMoved = true;
+                clearTimeout(dragTimeout);
+                dragTimeout = null;
+            }
+            return;
         }
         
-        // Om inget element dras eller drag inte är aktiverat, gör ingenting
-        if (!dragElement || !touchClone || !dragEnabled) return;
-        
+        // Om drag är aktivt, hantera som vanligt
+        if (!dragElement || !touchClone) return;
         element.preventDefault();
         
-        // Uppdatera klonens Y-position så den följer fingret
+        const touch = element.touches[0];
         touchClone.style.top = touch.clientY - (dragElement.offsetHeight / 2) + "px";
         
-        // Hitta vilket element som finns under fingret
         const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
         const over = elementBelow?.closest(".draggable");
         
-        // Om vi hittat ett draggable element och det inte är samma som dras
         if (over && over !== dragElement) {
             const rect = over.getBoundingClientRect();
             const before = (touch.clientY - rect.top) < rect.height / 2;
-            
             if (before) {
                 over.parentNode.insertBefore(dragElement, over);
             } else {
@@ -147,35 +114,31 @@ export function wireDnD(root) {
         }
     }, { passive: false });
 
-    // Lyssnare för när användaren lyfter fingret från skärmen
+    // UPPDATERAD touchend
     list.addEventListener("touchend", () => {
-        // NY: Rensa timer om den fortfarande är aktiv
-        if (holdTimer) {
-            clearTimeout(holdTimer);
-            holdTimer = null;
+        // Rensa timeout om den finns
+        if (dragTimeout) {
+            clearTimeout(dragTimeout);
+            dragTimeout = null;
         }
         
-        // Om det finns ett draget element
         if (dragElement) {
             dragElement.style.opacity = "1";
             dragElement = null;
         }
-        // Om det finns en klon
         if (touchClone) {
             touchClone.remove();
             touchClone = null;
         }
-        // Återställ alla flaggor
         isTouchActive = false;
-        dragEnabled = false;
+        hasMoved = false;
     });
     
-    // Lyssnare för touchcancel
+    // UPPDATERAD touchcancel
     list.addEventListener("touchcancel", () => {
-        // NY: Rensa timer
-        if (holdTimer) {
-            clearTimeout(holdTimer);
-            holdTimer = null;
+        if (dragTimeout) {
+            clearTimeout(dragTimeout);
+            dragTimeout = null;
         }
         
         if (dragElement) {
@@ -187,11 +150,10 @@ export function wireDnD(root) {
             touchClone = null;
         }
         isTouchActive = false;
-        dragEnabled = false;
+        hasMoved = false;
     });
 }
 
-// Funktion som läser användarens slutgiltiga sortering och returnerar en array med ID:n
 export function readUserOrder(root) {
     return [...root.querySelectorAll("#sortable-list > .draggable")]
     .map((element) => Number(element.dataset.id)); 
