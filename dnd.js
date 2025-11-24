@@ -62,6 +62,9 @@ export function wireDnD(root) {
         startTouchX = element.touches[0].clientX;
         startTouchY = element.touches[0].clientY;
         
+        // Förhindra scroll omedelbart när användaren håller på ett draggable element
+        element.preventDefault();
+        
         // Starta en timer som väntar 0.3 sekunder innan drag aktiveras
         touchTimer = setTimeout(() => {
             // Efter 0.3 sekunder, aktivera dragging
@@ -95,9 +98,12 @@ export function wireDnD(root) {
             currentCard.style.opacity = "0.3";
             
             // Ge användaren haptisk feedback (vibration) om tillgängligt
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
         }, HOLD_DURATION);
         
-    }, { passive: true }); // passive: true = förbättrar scroll-prestanda
+    }, { passive: false }); // passive: false = tillåter preventDefault()
 
     // Lyssnare för när användaren rör fingret över skärmen
     list.addEventListener("touchmove", (element) => {
