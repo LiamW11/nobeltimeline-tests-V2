@@ -100,7 +100,7 @@ export function wireDnD(root) {
             }
         }, HOLD_DURATION);
         
-    }, { passive: true }); // passive: true = förbättrar scroll-prestanda
+    }, { passive: false }); // passive: true = förbättrar scroll-prestanda
 
     // Lyssnare för när användaren rör fingret över skärmen
     list.addEventListener("touchmove", (element) => {
