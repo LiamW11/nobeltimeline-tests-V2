@@ -15,7 +15,7 @@ export function wireDnD(root) {
     let isDragging = false;
     let startTouchX = 0;
     let startTouchY = 0;
-    const HOLD_DURATION = 100; // 0.3 sekunder i millisekunder
+    const HOLD_DURATION = 300; // 0.3 sekunder i millisekunder
     const MOVE_THRESHOLD = 10; // pixels som fingret får röra sig innan drag avbryts
     
     //För pc - här kan vi behålla som det var
@@ -100,7 +100,7 @@ export function wireDnD(root) {
             }
         }, HOLD_DURATION);
         
-    }, { passive: false }); // passive: true = förbättrar scroll-prestanda
+    }, { passive: true }); // passive: true = förbättrar scroll-prestanda
 
     // Lyssnare för när användaren rör fingret över skärmen
     list.addEventListener("touchmove", (element) => {
@@ -119,14 +119,16 @@ export function wireDnD(root) {
             }
         }
         
+        // Om drag är aktivt, förhindra scroll DIREKT (även om klonen inte skapats än)
+        if (isDragging) {
+            element.preventDefault();
+        }
+        
         // Om drag inte är aktivt, tillåt normal scroll
         if (!isDragging) return;
         
-        // Om inget element dras, gör ingenting
+        // Om inget element dras än, gör ingenting mer
         if (!dragElement || !touchClone) return;
-        
-        // Nu när vi vet att vi drar, förhindra scroll
-        element.preventDefault();
         
         // Hämta första fingrets position
         const touch = element.touches[0];
