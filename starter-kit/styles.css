@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base Styles */
+@layer base {
+  body {
+    @apply font-sans text-neutral-800 bg-neutral-50;
+  }
+
+  h1 {
+    @apply font-serif text-display text-nobel-blue;
+  }
+
+  h2 {
+    @apply font-serif text-headline text-nobel-blue;
+  }
+
+  h3 {
+    @apply font-sans text-title text-nobel-blue-dark;
+  }
+
+  button {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  input, textarea {
+    @apply transition-colors duration-150;
+  }
+}
+
+/* Component Styles */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-nobel-gold text-white hover:bg-nobel-gold-dark;
+    @apply focus:ring-nobel-gold;
+  }
+
+  .btn-secondary {
+    @apply bg-nobel-blue text-white hover:bg-nobel-blue-dark;
+    @apply focus:ring-nobel-blue;
+  }
+
+  .btn-outline {
+    @apply border-2 border-nobel-blue text-nobel-blue;
+    @apply hover:bg-nobel-blue hover:text-white;
+    @apply focus:ring-nobel-blue;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-xl shadow-card p-6;
+    @apply transition-shadow duration-300;
+  }
+
+  .card-hover {
+    @apply hover:shadow-card-hover;
+  }
+
+  .card-interactive {
+    @apply cursor-pointer transform transition-transform duration-200;
+    @apply hover:scale-105;
+  }
+
+  /* Input Fields */
+  .input {
+    @apply w-full px-4 py-3 rounded-lg border-2 border-neutral-300;
+    @apply focus:border-nobel-blue focus:outline-none;
+    @apply placeholder:text-neutral-400;
+  }
+
+  /* Game Container */
+  .game-container {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+  }
+
+  /* Header */
+  .header {
+    @apply bg-gradient-to-r from-nobel-blue to-nobel-blue-dark;
+    @apply text-white py-6 px-4;
+  }
+
+  /* Score Display */
+  .score-display {
+    @apply text-2xl font-bold text-nobel-gold;
+    @apply animate-bounce-subtle;
+  }
+
+  /* Timer */
+  .timer {
+    @apply text-xl font-mono font-bold;
+  }
+
+  .timer-warning {
+    @apply text-red-600 animate-pulse;
+  }
+
+  /* Progress Bar */
+  .progress-bar {
+    @apply w-full h-3 bg-neutral-200 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-nobel-gold transition-all duration-300;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center;
+    @apply z-50 animate-fade-in;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-2xl p-8 max-w-md w-full mx-4;
+    @apply animate-slide-up;
+  }
+
+  /* Leaderboard */
+  .leaderboard-entry {
+    @apply flex justify-between items-center py-3 px-4;
+    @apply border-b border-neutral-200 last:border-0;
+    @apply hover:bg-neutral-50 transition-colors;
+  }
+
+  .rank-badge {
+    @apply w-8 h-8 rounded-full flex items-center justify-center;
+    @apply font-bold text-sm;
+  }
+
+  .rank-gold {
+    @apply bg-nobel-gold text-white;
+  }
+
+  .rank-silver {
+    @apply bg-neutral-400 text-white;
+  }
+
+  .rank-bronze {
+    @apply bg-amber-700 text-white;
+  }
+
+  /* Loading Spinner */
+  .spinner {
+    @apply inline-block w-8 h-8 border-4 border-nobel-blue border-t-transparent;
+    @apply rounded-full animate-spin;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-block px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-category {
+    @apply bg-nobel-blue-light text-white;
+  }
+
+  /* Animations */
+  .fade-in {
+    @apply animate-fade-in;
+  }
+
+  .slide-up {
+    @apply animate-slide-up;
+  }
+}
+
+/* Utility Classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .gradient-gold {
+    background: linear-gradient(135deg, #C5A572 0%, #D4B88C 100%);
+  }
+
+  .gradient-blue {
+    background: linear-gradient(135deg, #003C71 0%, #205A8F 100%);
+  }
+
+  /* Focus visible for accessibility */
+  .focus-visible {
+    @apply focus:outline-none focus:ring-2 focus:ring-nobel-gold focus:ring-offset-2;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-nobel-gold rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-nobel-gold-dark;
+}
