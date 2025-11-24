@@ -15,7 +15,7 @@ export function wireDnD(root) {
     let isDragging = false;
     let startTouchX = 0;
     let startTouchY = 0;
-    const HOLD_DURATION = 200; // 0.3 sekunder i millisekunder
+    const HOLD_DURATION = 100; // 0.3 sekunder i millisekunder
     const MOVE_THRESHOLD = 10; // pixels som fingret får röra sig innan drag avbryts
     
     //För pc - här kan vi behålla som det var
