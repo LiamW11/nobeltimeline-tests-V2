@@ -8,12 +8,11 @@ export function wireDnD(root) {
     let touchStartX = 0;
     let isTouchActive = false;
     
-    // NYA variabler för scroll-detection
-    let touchStartTime = 0;
-    let hasMoved = false;
+    // Variabler för scroll-detection
     let dragTimeout = null;
-    const DRAG_DELAY = 150; // millisekunder innan drag aktiveras
-    const MOVE_THRESHOLD = 10; // pixlar som krävs för att det ska räknas som movement
+    let potentialDragCard = null;
+    const DRAG_DELAY = 150; // 300ms fördröjning
+    const MOVE_THRESHOLD = 5; // 5px rörelse avbryter drag
 
     // För PC
     list.addEventListener("dragstart", (element) => {
@@ -35,56 +34,69 @@ export function wireDnD(root) {
         }
     });
 
-    // För mobil - UPPDATERAD touchstart
+    // För mobil - touchstart UTAN preventDefault
     list.addEventListener("touchstart", (element) => {
         const currentCard = element.target.closest(".draggable");
+        
+        // Om inte på ett kort, gör ingenting
         if (!currentCard) return;
         
+        // Om redan en touch är aktiv, blockera
         if (isTouchActive) {
             element.preventDefault();
             return;
         }
         
-        // Spara startposition och tid
-        touchStartY = element.touches[0].clientY;
-        touchStartX = element.touches[0].clientX;
-        touchStartTime = Date.now();
-        hasMoved = false;
+        // VIKTIGT: INTE preventDefault här - tillåt scroll!
+        
+        // Spara startposition
+        const touch = element.touches[0];
+        touchStartY = touch.clientY;
+        touchStartX = touch.clientX;
+        potentialDragCard = currentCard;
         
         // Sätt en timeout som aktiverar drag efter DRAG_DELAY
         dragTimeout = setTimeout(() => {
-            // Aktivera endast om användaren inte har scrollat
-            if (!hasMoved) {
-                element.preventDefault();
+            // Aktivera endast om touch fortfarande är på samma kort
+            if (potentialDragCard && !isTouchActive) {
                 isTouchActive = true;
-                dragElement = currentCard;
+                dragElement = potentialDragCard;
                 
                 // Skapa visuell klon
-                touchClone = currentCard.cloneNode(true);
+                touchClone = dragElement.cloneNode(true);
                 touchClone.style.position = "fixed";
-                touchClone.style.width = currentCard.offsetWidth + "px";
+                touchClone.style.width = dragElement.offsetWidth + "px";
                 touchClone.style.opacity = "0.8";
                 touchClone.style.pointerEvents = "none";
                 touchClone.style.zIndex = "1000";
-                touchClone.style.left = currentCard.getBoundingClientRect().left + "px";
-                touchClone.style.top = element.touches[0].clientY - (currentCard.offsetHeight / 2) + "px";
-                document.body.appendChild(touchClone);
+                touchClone.style.left = dragElement.getBoundingClientRect().left + "px";
                 
-                currentCard.style.opacity = "0.3";
+                // Använd nuvarande touch position, inte start position
+                const currentTouch = document.elementFromPoint(touchStartX, touchStartY);
+                if (currentTouch) {
+                    touchClone.style.top = touchStartY - (dragElement.offsetHeight / 2) + "px";
+                }
+                
+                document.body.appendChild(touchClone);
+                dragElement.style.opacity = "0.3";
+                
+                // Vibrering som feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
             }
         }, DRAG_DELAY);
         
-    }, { passive: true }); // VIKTIGT: passive: true för att tillåta scroll
+    }, { passive: true }); // passive: true - tillåt scroll!
 
-    // NY touchmove - kolla om användaren scrollar
+    // touchmove - detektera rörelse och hantera drag
     list.addEventListener("touchmove", (element) => {
-        // Om drag är aktivt, stoppa scroll och hantera drag
-        if (isTouchActive) {
+        const touch = element.touches[0];
+        
+        // Om drag är aktivt, förhindra scroll och hantera drag
+        if (isTouchActive && dragElement && touchClone) {
             element.preventDefault();
             
-            if (!dragElement || !touchClone) return;
-            
-            const touch = element.touches[0];
             touchClone.style.top = touch.clientY - (dragElement.offsetHeight / 2) + "px";
             
             const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -102,30 +114,31 @@ export function wireDnD(root) {
             return;
         }
         
-        // Om drag inte är aktiverat än, kolla om användaren scrollar
-        if (!isTouchActive && dragTimeout) {
-            const touch = element.touches[0];
+        // Om vi väntar på drag-aktivering, kolla om användaren scrollar
+        if (dragTimeout && potentialDragCard) {
             const deltaY = Math.abs(touch.clientY - touchStartY);
             const deltaX = Math.abs(touch.clientX - touchStartX);
             
-            // Om användaren har rört sig mer än threshold, avbryt drag
+            // Om användaren har rört sig, avbryt drag
             if (deltaY > MOVE_THRESHOLD || deltaX > MOVE_THRESHOLD) {
-                hasMoved = true;
                 clearTimeout(dragTimeout);
                 dragTimeout = null;
+                potentialDragCard = null;
             }
-            return;
         }
-    }, { passive: false });
+    }, { passive: false }); // passive: false för att kunna stoppa scroll när drag är aktivt
 
-    // UPPDATERAD touchend
+    // touchend - rensa allt
     list.addEventListener("touchend", () => {
-        // Rensa timeout om den finns
+        // Rensa timeout
         if (dragTimeout) {
             clearTimeout(dragTimeout);
             dragTimeout = null;
         }
         
+        potentialDragCard = null;
+        
+        // Om drag var aktivt, återställ
         if (dragElement) {
             dragElement.style.opacity = "1";
             dragElement = null;
@@ -134,17 +147,22 @@ export function wireDnD(root) {
             touchClone.remove();
             touchClone = null;
         }
+        
+        // Återställ alla variabler
         isTouchActive = false;
-        hasMoved = false;
+        touchStartY = 0;
+        touchStartX = 0;
     });
     
-    // UPPDATERAD touchcancel
+    // touchcancel - samma som touchend
     list.addEventListener("touchcancel", () => {
         if (dragTimeout) {
             clearTimeout(dragTimeout);
             dragTimeout = null;
         }
         
+        potentialDragCard = null;
+        
         if (dragElement) {
             dragElement.style.opacity = "1";
             dragElement = null;
@@ -153,8 +171,10 @@ export function wireDnD(root) {
             touchClone.remove();
             touchClone = null;
         }
+        
         isTouchActive = false;
-        hasMoved = false;
+        touchStartY = 0;
+        touchStartX = 0;
     });
 }
 
