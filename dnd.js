@@ -78,7 +78,31 @@ export function wireDnD(root) {
 
     // NY touchmove - kolla om användaren scrollar
     list.addEventListener("touchmove", (element) => {
-        // Om drag inte är aktiverat än
+        // Om drag är aktivt, stoppa scroll och hantera drag
+        if (isTouchActive) {
+            element.preventDefault();
+            
+            if (!dragElement || !touchClone) return;
+            
+            const touch = element.touches[0];
+            touchClone.style.top = touch.clientY - (dragElement.offsetHeight / 2) + "px";
+            
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const over = elementBelow?.closest(".draggable");
+            
+            if (over && over !== dragElement) {
+                const rect = over.getBoundingClientRect();
+                const before = (touch.clientY - rect.top) < rect.height / 2;
+                if (before) {
+                    over.parentNode.insertBefore(dragElement, over);
+                } else {
+                    over.parentNode.insertBefore(dragElement, over.nextSibling);
+                }
+            }
+            return;
+        }
+        
+        // Om drag inte är aktiverat än, kolla om användaren scrollar
         if (!isTouchActive && dragTimeout) {
             const touch = element.touches[0];
             const deltaY = Math.abs(touch.clientY - touchStartY);
@@ -91,26 +115,6 @@ export function wireDnD(root) {
                 dragTimeout = null;
             }
             return;
-        }
-        
-        // Om drag är aktivt, hantera som vanligt
-        if (!dragElement || !touchClone) return;
-        element.preventDefault();
-        
-        const touch = element.touches[0];
-        touchClone.style.top = touch.clientY - (dragElement.offsetHeight / 2) + "px";
-        
-        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-        const over = elementBelow?.closest(".draggable");
-        
-        if (over && over !== dragElement) {
-            const rect = over.getBoundingClientRect();
-            const before = (touch.clientY - rect.top) < rect.height / 2;
-            if (before) {
-                over.parentNode.insertBefore(dragElement, over);
-            } else {
-                over.parentNode.insertBefore(dragElement, over.nextSibling);
-            }
         }
     }, { passive: false });
 
