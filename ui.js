@@ -116,7 +116,7 @@ export function renderBoard(root, cards) {
     const li = document.createElement("li");
     li.className =
      //bra fix för scroll problemet oskar upptäckte
-      "draggable card p-2 w-full bg-[#142845]/95 shadow-sm flex items-start gap-4 ring-1 ring-white/20";
+      "draggable card p-2 w-10/12 md:w-full bg-[#142845]/95 shadow-sm flex items-start gap-4 ring-1 ring-white/20";
     li.draggable = true;
     li.dataset.id = c.id;
     li.innerHTML =
