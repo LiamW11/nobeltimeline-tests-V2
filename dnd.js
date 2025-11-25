@@ -12,7 +12,7 @@ export function wireDnD(root) {
     let dragTimeout = null;
     let potentialDragCard = null;
     const DRAG_DELAY = 150; // 300ms fördröjning
-    const MOVE_THRESHOLD = 5; // 5px rörelse avbryter drag
+    const MOVE_THRESHOLD = 10; // 10px rörelse avbryter drag
 
     // För PC
     list.addEventListener("dragstart", (element) => {
