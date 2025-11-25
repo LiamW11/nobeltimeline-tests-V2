@@ -11,6 +11,8 @@ export function wireDnD(root) {
     let touchStartY = 0;
     // NY: Variabel som spårar om en touch redan är aktiv
     let isTouchActive = false;
+    let count = 0;
+    let dragTimer = 0;
 
     
     //För pc
@@ -59,6 +61,18 @@ export function wireDnD(root) {
             return; // Ignorera nya touches
         }
         
+        const intervalId = setInterval(() => {
+            dragTimer++;
+            count++;
+
+            if (count >= 10) {
+            clearInterval(intervalId);
+                }
+            }, 15);
+
+        if(dragTimer < 10){
+            return;
+        }
         // Endast förhindra default om vi faktiskt hittat ett kort att dra
         element.preventDefault();
         
@@ -143,6 +157,8 @@ export function wireDnD(root) {
         }
         // NY: Återställ touch-spärren
         isTouchActive = false;
+        dragTimer = 0;
+        count = 0;
     });
     
     // NY: Lyssnare för touchcancel (om touch avbryts, t.ex. vid notifikation)
