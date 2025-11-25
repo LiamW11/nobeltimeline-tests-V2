@@ -75,7 +75,9 @@ export function wireDnD(root) {
         // Positionera klonen med fixed position (följer inte scrollning)
         touchClone.style.position = "fixed";
         // Sätt samma bredd som originalet
-        touchClone.style.width = currentCard.offsetWidth + "px";
+        touchClone.classList.add("w-[93%]");
+        touchClone.querySelector("h4").classList.remove("w-[90%]");
+        touchClone.querySelector("h4").classList.remove("truncate");
         // Gör klonen lite genomskinlig så man ser att det är en kopia
         touchClone.style.opacity = "0.8";
         // Förhindra att klonen kan klickas/touchas (så vi kan hitta element under den)
