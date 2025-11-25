@@ -1,168 +1,152 @@
 export function wireDnD(root) {
+    // Hämta listan med sorterbara element från DOM:en som skapas i renderboard från ui.js
     const list = root.querySelector("#sortable-list");
     if (!list) return;
 
+    // Variabel som håller elementet som dras för tillfället
     let dragElement = null;
+    // Variabel som håller den visuella klonen när man touchar på mobil
     let touchClone = null;
+    // Variabel som lagrar startpositionen för touch
     let touchStartY = 0;
-    let touchStartX = 0;
+    // NY: Variabel som spårar om en touch redan är aktiv
     let isTouchActive = false;
-    
-    // Variabler för scroll-detection
-    let dragTimeout = null;
-    let potentialDragCard = null;
-    const DRAG_DELAY = 150; // 300ms fördröjning
-    const MOVE_THRESHOLD = 10; // 10px rörelse avbryter drag
 
-    // För PC
+    
+    //För pc
     list.addEventListener("dragstart", (element) => {
+        // Hitta närmaste .draggable element (om användaren klickar på t.ex. en bild inuti)
         const currentCard = element.target.closest(".draggable");
+        // Om inget draggable element hittades, gör ingenting
         if (!currentCard) return;
+        // Spara det element som dras
         dragElement = currentCard;
     });
 
+    // Lyssnare för när användaren drar över ett annat element
     list.addEventListener("dragover", (element) => {
+        // Förhindra standardbeteendet (annars fungerar inte drop)
         element.preventDefault();
+        // Hitta det element som musen är över
         const over = element.target.closest(".draggable");
+        // Om inget element hittades eller om det är samma element som dras, gör ingenting
         if (!over || over === dragElement) return;
+        // Hämta elementets position och storlek
         const rect = over.getBoundingClientRect();
+        // Kolla om musen är i övre halvan av elementet (då ska vi placera före)
+        // before blir true eller false beroende på ifall det man drar är över eller under hälften av det hovrar över
         const before = (element.clientY - rect.top) < rect.height / 2;
+        // Om musen är i övre halvan, sätt in det dragna elementet före
         if (before) {
             over.parentNode.insertBefore(dragElement, over);
         } else {
+            // Annars sätt in det efter
             over.parentNode.insertBefore(dragElement, over.nextSibling);
         }
     });
 
-    // För mobil - touchstart UTAN preventDefault
+    //För mobil
+    // Lyssnare för när användaren börjar röra skärmen
     list.addEventListener("touchstart", (element) => {
+        // Hitta närmaste .draggable element
         const currentCard = element.target.closest(".draggable");
-        
-        // Om inte på ett kort, gör ingenting
+        // Om inget draggable element hittades, gör ingenting (tillåt scroll)
         if (!currentCard) return;
         
-        // Om redan en touch är aktiv, blockera
+        // NY: Kontrollera om en touch redan är aktiv
         if (isTouchActive) {
             element.preventDefault();
-            return;
+            return; // Ignorera nya touches
         }
         
-        // VIKTIGT: INTE preventDefault här - tillåt scroll!
+        // Endast förhindra default om vi faktiskt hittat ett kort att dra
+        element.preventDefault();
         
-        // Spara startposition
-        const touch = element.touches[0];
-        touchStartY = touch.clientY;
-        touchStartX = touch.clientX;
-        potentialDragCard = currentCard;
+        // NY: Markera att en touch nu är aktiv
+        isTouchActive = true;
         
-        // Sätt en timeout som aktiverar drag efter DRAG_DELAY
-        dragTimeout = setTimeout(() => {
-            // Aktivera endast om touch fortfarande är på samma kort
-            if (potentialDragCard && !isTouchActive) {
-                isTouchActive = true;
-                dragElement = potentialDragCard;
-                
-                // Skapa visuell klon
-                touchClone = dragElement.cloneNode(true);
-                touchClone.style.position = "fixed";
-                touchClone.style.width = dragElement.offsetWidth + "px";
-                touchClone.style.opacity = "0.8";
-                touchClone.style.pointerEvents = "none";
-                touchClone.style.zIndex = "1000";
-                touchClone.style.left = dragElement.getBoundingClientRect().left + "px";
-                
-                // Använd nuvarande touch position, inte start position
-                const currentTouch = document.elementFromPoint(touchStartX, touchStartY);
-                if (currentTouch) {
-                    touchClone.style.top = touchStartY - (dragElement.offsetHeight / 2) + "px";
-                }
-                
-                document.body.appendChild(touchClone);
-                dragElement.style.opacity = "0.3";
-                
-                // Vibrering som feedback
-                if (navigator.vibrate) {
-                    navigator.vibrate(50);
-                }
-            }
-        }, DRAG_DELAY);
+        // Spara det element som ska flyttas
+        dragElement = currentCard;
+        // Spara startpositionen för touch (första fingrets Y-koordinat)
+        touchStartY = element.touches[0].clientY;
         
-    }, { passive: true }); // passive: true - tillåt scroll!
+        // Skapa en visuell klon av elementet som följer fingret
+        touchClone = currentCard.cloneNode(true); // true = klona alla barn också
+        // Positionera klonen med fixed position (följer inte scrollning)
+        touchClone.style.position = "fixed";
+        // Sätt samma bredd som originalet
+        touchClone.style.width = currentCard.offsetWidth + "px";
+        // Gör klonen lite genomskinlig så man ser att det är en kopia
+        touchClone.style.opacity = "0.8";
+        // Förhindra att klonen kan klickas/touchas (så vi kan hitta element under den)
+        touchClone.style.pointerEvents = "none";
+        // Sätt hög z-index så klonen visas ovanpå allt annat
+        touchClone.style.zIndex = "1000";
+        // Positionera klonen på samma X-position som originalet
+        touchClone.style.left = currentCard.getBoundingClientRect().left + "px";
+        // Centrera klonen vertikalt på fingrets position
+        touchClone.style.top = element.touches[0].clientY - (currentCard.offsetHeight / 2) + "px";
+        // Lägg till klonen i body (utanför listan så den kan röra sig fritt)
+        document.body.appendChild(touchClone);
+        
+        // Gör originalelementet genomskinligt så man ser var det kommer att placeras
+        currentCard.style.opacity = "0.3";
+    }, { passive: false }); // ÄNDRAT: passive: false istället för true så preventDefault fungerar
 
-    // touchmove - detektera rörelse och hantera drag
+    // Lyssnare för när användaren rör fingret över skärmen
     list.addEventListener("touchmove", (element) => {
+        // Om inget element dras, gör ingenting
+        if (!dragElement || !touchClone) return;
+        element.preventDefault();
+        
+        // Hämta första fingrets position
         const touch = element.touches[0];
+        // Uppdatera klonens Y-position så den följer fingret (centrerad)
+        touchClone.style.top = touch.clientY - (dragElement.offsetHeight / 2) + "px";
         
-        // Om drag är aktivt, förhindra scroll och hantera drag
-        if (isTouchActive && dragElement && touchClone) {
-            element.preventDefault();
-            
-            touchClone.style.top = touch.clientY - (dragElement.offsetHeight / 2) + "px";
-            
-            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-            const over = elementBelow?.closest(".draggable");
-            
-            if (over && over !== dragElement) {
-                const rect = over.getBoundingClientRect();
-                const before = (touch.clientY - rect.top) < rect.height / 2;
-                if (before) {
-                    over.parentNode.insertBefore(dragElement, over);
-                } else {
-                    over.parentNode.insertBefore(dragElement, over.nextSibling);
-                }
-            }
-            return;
-        }
+        // Hitta vilket element som finns under fingret (ignorerar klonen pga pointerEvents: none)
+        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        // Hitta närmaste .draggable element
+        const over = elementBelow?.closest(".draggable");
         
-        // Om vi väntar på drag-aktivering, kolla om användaren scrollar
-        if (dragTimeout && potentialDragCard) {
-            const deltaY = Math.abs(touch.clientY - touchStartY);
-            const deltaX = Math.abs(touch.clientX - touchStartX);
-            
-            // Om användaren har rört sig, avbryt drag
-            if (deltaY > MOVE_THRESHOLD || deltaX > MOVE_THRESHOLD) {
-                clearTimeout(dragTimeout);
-                dragTimeout = null;
-                potentialDragCard = null;
+        // Om vi hittat ett draggable element och det inte är samma som dras
+        if (over && over !== dragElement) {
+            // Hämta elementets position och storlek
+            const rect = over.getBoundingClientRect();
+            // Kolla om fingret är i övre halvan av elementet
+            const before = (touch.clientY - rect.top) < rect.height / 2;
+            // Om fingret är i övre halvan, sätt in det dragna elementet före
+            if (before) {
+                over.parentNode.insertBefore(dragElement, over);
+            } else {
+                // Annars sätt in det efter
+                over.parentNode.insertBefore(dragElement, over.nextSibling);
             }
         }
-    }, { passive: false }); // passive: false för att kunna stoppa scroll när drag är aktivt
+    }, { passive: false }); // passive: false = tillåter preventDefault()
 
-    // touchend - rensa allt
+    // Lyssnare för när användaren lyfter fingret från skärmen
     list.addEventListener("touchend", () => {
-        // Rensa timeout
-        if (dragTimeout) {
-            clearTimeout(dragTimeout);
-            dragTimeout = null;
-        }
-        
-        potentialDragCard = null;
-        
-        // Om drag var aktivt, återställ
+        // Om det finns ett draget element
         if (dragElement) {
+            // Återställ originalelementets opacity till fullt synlig
             dragElement.style.opacity = "1";
+            // Nollställ dragElement variabeln
             dragElement = null;
         }
+        // Om det finns en klon
         if (touchClone) {
+            // Ta bort klonen från DOM:en
             touchClone.remove();
+            // Nollställ touchClone variabeln
             touchClone = null;
         }
-        
-        // Återställ alla variabler
+        // NY: Återställ touch-spärren
         isTouchActive = false;
-        touchStartY = 0;
-        touchStartX = 0;
     });
     
-    // touchcancel - samma som touchend
+    // NY: Lyssnare för touchcancel (om touch avbryts, t.ex. vid notifikation)
     list.addEventListener("touchcancel", () => {
-        if (dragTimeout) {
-            clearTimeout(dragTimeout);
-            dragTimeout = null;
-        }
-        
-        potentialDragCard = null;
-        
         if (dragElement) {
             dragElement.style.opacity = "1";
             dragElement = null;
@@ -171,14 +155,19 @@ export function wireDnD(root) {
             touchClone.remove();
             touchClone = null;
         }
-        
         isTouchActive = false;
-        touchStartY = 0;
-        touchStartX = 0;
     });
 }
 
+// Funktion som läser användarens slutgiltiga sortering och returnerar en array med ID:n
 export function readUserOrder(root) {
+    // Hämta alla .draggable element som är direkta barn till #sortable-list
+    // querySelectorAll returnerar en NodeList, som vi konverterar till en riktig array med spread-operatorn [...]
     return [...root.querySelectorAll("#sortable-list > .draggable")]
+    // Loopa igenom varje element och extrahera dess data-id attribut
+    // .map() skapar en ny array med resultaten
     .map((element) => Number(element.dataset.id)); 
+    // el.dataset.id hämtar värdet från data-id attributet (t.ex. data-id="5")
+    // Number() konverterar strängen till ett nummer (t.ex. "5" blir 5)
+    // Returvärde: [5, 12, 3, 8] - en array med ID:n i den ordning användaren sorterat korten
 }
