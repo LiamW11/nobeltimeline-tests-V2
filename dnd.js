@@ -42,59 +42,77 @@ export function wireDnD(root) {
 
     // ---------------- MOBILE TOUCH HANDLERS (REPLACED WITH NEW) ----------------
 
-    list.addEventListener("touchstart", (e) => {
-        const card = e.target.closest(".draggable");
-        if (!card) return; // Låt scroll fungera som vanligt
+   list.addEventListener("touchstart", (e) => {
+    const card = e.target.closest(".draggable");
+    if (!card) return;
 
-        dragElement = card; // NEW
+    dragElement = card;
+    dragging = false;
 
-        touchStartY = e.touches[0].clientY; // NEW
-        touchStartX = e.touches[0].clientX; // NEW
-        dragging = false; // NEW
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
 
-        // NEW: Starta en long-press timer (100 ms)
-        longPressTimer = setTimeout(() => {
-            startDrag(card, e.touches[0].clientX, e.touches[0].clientY); // NEW
-        }, LONG_PRESS_MS);
-    }, { passive: true }); // NEW: Låt scroll fungera!
+    // NEW: Scroll-blockad flagga
+    let scrollBlocked = false;
 
+    // NEW: Starta long-press timer
+    longPressTimer = setTimeout(() => {
+        scrollBlocked = true;      // Blockera scroll först här
+        startDrag(card, touchStartX, touchStartY);
+    }, LONG_PRESS_MS);
 
-    list.addEventListener("touchmove", (e) => {
-        if (!dragElement) return;
+    // NEW: spara funktionen för move-hanterare
+    function handleMove(m) {
+        const t = m.touches[0];
+        const dy = Math.abs(t.clientY - touchStartY);
+        const dx = Math.abs(t.clientX - touchStartX);
 
-        const touch = e.touches[0];
-        const dy = Math.abs(touch.clientY - touchStartY); // NEW
-        const dx = Math.abs(touch.clientX - touchStartX); // NEW
-
-        // NEW: Avbryt long-press om användaren försöker scrolla
+        // Om användaren börjar scrolla → avbryt long-press
         if (!dragging && (dy > MOVE_THRESHOLD || dx > MOVE_THRESHOLD)) {
-            clearTimeout(longPressTimer); // NEW
-            dragElement = null; // NEW
-            return; // NEW — Scroll fortsätter
+            clearTimeout(longPressTimer);
+            list.removeEventListener("touchmove", handleMove);
+            dragElement = null;
+            return; // Scroll OK
         }
 
-        // NEW: Aktiv drag startad
         if (dragging) {
-            e.preventDefault();
+            m.preventDefault(); // NU stoppar vi scroll
+            touchClone.style.top = t.clientY - dragElement.offsetHeight / 2 + "px";
 
-            touchClone.style.top = touch.clientY - dragElement.offsetHeight / 2 + "px";
-
-            const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const elBelow = document.elementFromPoint(t.clientX, t.clientY);
             const over = elBelow?.closest(".draggable");
 
             if (over && over !== dragElement) {
                 const rect = over.getBoundingClientRect();
-                const before = (touch.clientY - rect.top) < rect.height / 2;
+                const before = (t.clientY - rect.top) < rect.height / 2;
 
-                if (before) {
-                    over.parentNode.insertBefore(dragElement, over);
-                } else {
-                    over.parentNode.insertBefore(dragElement, over.nextSibling);
-                }
+                if (before) over.parentNode.insertBefore(dragElement, over);
+                else over.parentNode.insertBefore(dragElement, over.nextSibling);
             }
+        } else if (scrollBlocked) {
+            // Liten anti-scroll-fix om drag precis börjar
+            m.preventDefault();
         }
-    }, { passive: false }); // NEW: För att kunna stoppa scroll när draggin är aktiv
+    }
 
+    list.addEventListener("touchmove", handleMove, { passive: false });
+
+    // När touchend sker: städa
+    list.addEventListener("touchend", () => {
+        clearTimeout(longPressTimer);
+        list.removeEventListener("touchmove", handleMove);
+
+        if (dragging) {
+            dragElement.style.opacity = "1";
+            touchClone.remove();
+        }
+
+        dragElement = null;
+        touchClone = null;
+        dragging = false;
+    }, { once: true });
+
+}, { passive: false }); // ← VIKTIGT! Scroll får inte vara helt låst.
 
     list.addEventListener("touchend", () => {
         clearTimeout(longPressTimer); // NEW
